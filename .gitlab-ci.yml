@@ -1,0 +1,124 @@
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+  VIVADO_DIR: "/opt/Xilinx/Vivado/2019.2"
+  VIVADO: "${VIVADO_DIR}/bin/vivado"
+  SUBMISSION_BASE_DIR: "./official/nscscc2022_group_qualifier_submission"
+  SUBMISSION_DIR: "${SUBMISSION_BASE_DIR}/submission/MOU_1_zhangsan/src/mycpu"
+
+stages:
+  - generate_verilog
+  - ip_config
+  - bitstreams
+
+loongson_final_verilog:
+  stage: generate_verilog
+  image: cuibst/scala-mill:latest
+  tags:
+    - cod20-ci-runner
+  script:
+    - mill ZenCove.runMain zencove.soc.CPUTopVerilog
+    - mill ZenCove.runMain zencove.soc.CPUCoreVerilog
+  artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
+    when: always
+    paths:
+      - generated_verilog/*.v
+
+perf_clk_pll:
+  stage: ip_config
+  image: vivado:2019.2
+  tags:
+    - cod20-ci-runner
+  only:
+    variables:
+      - $CI_PIPELINE_SOURCE == "web" && $PERF_TEST
+      - $CI_COMMIT_BRANCH == "dev"
+      - $CI_COMMIT_BRANCH =~ /^opt-.*/
+  variables:
+    PERF_TEST_DIR: ${SUBMISSION_BASE_DIR}/release_project/perf_test_v0.01/soc_axi_perf
+    PLL_FREQ: 111
+  script:
+    - mkdir -p ${SUBMISSION_DIR}
+    - ${VIVADO} -mode tcl -source .ci-scripts/configure_pll.tcl ${PERF_TEST_DIR}/run_vivado/mycpu_prj1/mycpu.xpr
+    - cp ${PERF_TEST_DIR}/rtl/xilinx_ip/clk_pll/clk_pll.xci ${SUBMISSION_DIR}/../perf_clk_pll.xci
+  artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
+    when: always
+    paths:
+      - ${SUBMISSION_DIR}/../perf_clk_pll.xci
+
+func_test_bitstream:
+  stage: bitstreams
+  only:
+    variables:
+      - $CI_PIPELINE_SOURCE == "web" && $FUNC_TEST
+      - $CI_COMMIT_BRANCH == "dev"
+  image: vivado:2019.2
+  tags:
+    - cod20-ci-runner
+  dependencies:
+    - loongson_final_verilog
+  script:
+    - mkdir -p ${SUBMISSION_DIR}
+    - mkdir -p ${SUBMISSION_BASE_DIR}/release_project/func_test_v0.01/cpu132_gettrace
+    - cp rtl/**/*.xci ${SUBMISSION_DIR}/
+    - cp generated_verilog/mycpu_top.v ${SUBMISSION_DIR}/
+    - cd ${SUBMISSION_BASE_DIR}/script
+    - echo -e "init all\nrun all 1\nexit\n" | ${VIVADO} -mode batch -source script.tcl
+  artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
+    when: always
+    paths:
+      - ${SUBMISSION_BASE_DIR}/script/result/
+
+perf_test_bitstream:
+  stage: bitstreams
+  only:
+    variables:
+      - $CI_PIPELINE_SOURCE == "web" && $PERF_TEST
+      - $CI_COMMIT_BRANCH == "dev"
+      - $CI_COMMIT_BRANCH =~ /^opt-.*/
+  image: vivado:2019.2
+  tags:
+    - cod20-ci-runner
+  dependencies:
+    - loongson_final_verilog
+    - perf_clk_pll
+  script:
+    - mkdir -p ${SUBMISSION_DIR}
+    - mkdir -p ${SUBMISSION_BASE_DIR}/release_project/func_test_v0.01/cpu132_gettrace
+    - cp rtl/**/*.xci ${SUBMISSION_DIR}/
+    - cp generated_verilog/mycpu_top.v ${SUBMISSION_DIR}/
+    - cd ${SUBMISSION_BASE_DIR}/script
+    - echo -e "init all\nrun all 3\nexit\n" | ${VIVADO} -mode batch -source script.tcl
+    - grep "Post Routing Timing Summary" result/MOU_1_zhangsan/perf_run.log
+    - grep "The design met the timing requirement" result/MOU_1_zhangsan/perf_run.log
+  artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
+    when: always
+    paths:
+      - ${SUBMISSION_BASE_DIR}/script/result/
+
+system_test_bitstream:
+  stage: bitstreams
+  only:
+    variables:
+      - $CI_PIPELINE_SOURCE == "web" && $SYSTEM_TEST
+      - $CI_COMMIT_BRANCH == "dev"
+  image: vivado:2019.2
+  tags:
+    - cod20-ci-runner
+  dependencies:
+    - loongson_final_verilog
+  script:
+    - mkdir -p ${SUBMISSION_DIR}
+    - mkdir -p ${SUBMISSION_BASE_DIR}/release_project/func_test_v0.01/cpu132_gettrace
+    - cp rtl/**/*.xci ${SUBMISSION_DIR}/
+    - cp generated_verilog/mycpu_top.v ${SUBMISSION_DIR}/
+    - cd ${SUBMISSION_BASE_DIR}/script
+    - echo -e "init all\nrun all 4\nexit\n" | ${VIVADO} -mode batch -source script.tcl
+  artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
+    when: always
+    paths:
+      - ${SUBMISSION_BASE_DIR}/script/result/

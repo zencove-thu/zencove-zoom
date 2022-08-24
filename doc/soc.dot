@@ -1,0 +1,50 @@
+digraph soc {
+    c [label="ZenCove CPU Core" shape="box"];
+    ico [label="Interrupt Concat" shape="box"]
+    j [label="JTAG AXI Master" shape="box"];
+    mi [label="Main Interconnect 4x4" shape="hexagon"];
+    pi [label="Peripheral Interconnect 1x11" shape="hexagon"];
+    ic [label="Interrupt Controller" shape="box"];
+    apb [label="AXI-APB Bridge" shape="box"];
+    br [label="Boot ROM" shape="box"];
+    om [label="On Chip Memory" shape="box"];
+    mig [label="Memory Interface Generator" shape="box"];
+    io [label="Board I/O"];
+    axi [label="AXI Devices" shape="box"];
+    apbd [label="APB Devices" shape="box"];
+    mem [label="Memory Interconnect 4x1" shape="box"];
+    fb [label="Frame Buffer" shape="box"];
+    tft [label="AXI TFT Controller" shape="box"];
+
+    c -> mi [dir=both label="3 masters"];
+    j -> mi [dir=both];
+
+    mi -> pi [dir=both];
+    mi -> om [dir=both];
+    mi -> br [dir=both];
+    mi -> mem [dir=both];
+
+    pi -> apb [dir=both];
+    pi -> ic [dir=both];
+    pi -> axi [dir=both label="6 Slaves"];
+    pi -> fb [dir=both label="2 slaves"];
+    pi -> tft [dir=both];
+
+    fb -> mem [label="2 masters"];
+    tft -> mem [dir="both"];
+    mem -> mig [dir="both"];
+
+    axi -> ico [label="Serial\nPS2" color="green"];
+    axi -> ic [color="green"];
+
+    ic -> ico [color="green"];
+    ico -> c [color="green"];
+
+    apb -> apbd [dir=both label="2 slaves" color="cyan"];
+
+    axi -> io [dir=both color="chocolate"];
+    apbd -> io [dir=both color="chocolate"];
+    mig -> io [dir=both color="chocolate"];
+    tft -> io [dir=both color="chocolate"];
+    
+}

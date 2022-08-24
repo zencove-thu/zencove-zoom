@@ -1,0 +1,125 @@
+digraph structs {
+
+    subgraph cluster_frontend {
+		node [shape=record style=filled]
+		style = filled
+		color = lightgrey
+        label = "Frontend Pipeline"
+        
+		IF1 [fillcolor=white, label="IF1|{program counter | {<icr> icache read|<itlb> TLB|<btbr> BTB read}}"];
+        IF2 [fillcolor=white, label="IF2|{{{<icres> icache result|<itc> tag compare} |<bpu> Branch Prediction Unit}| <fb> Fetch Buffer}"]
+	}
+
+    subgraph cluster_decode {
+        node [shape=record style=filled]
+        style = filled
+		color = lightblue
+        label = "Decode Pipeline"
+
+        da [fillcolor=white, label="ID|Decoder Array"];
+        rnm [fillcolor=white, label="RENAME|Rename Unit"];
+
+        subgraph cluster_disp {
+            node [shape=record style=filled]
+            rank = "same"
+            style = "dashed"
+            label = "DISPATCH"
+            color = "black"
+            robi [fillcolor=white, label="Reorder Buffer Info"];
+            intiq [fillcolor=white, label="Int Issue Queue Push"];
+            memiq [fillcolor=white, label="Memory Issue Queue Push"];
+            muliq [fillcolor=white, label="Mul/Div Issue Queue Push"];
+        }
+    }
+
+    subgraph cluster_iss {
+        rank = "same"
+        style = "dashed"
+        label = "ISS"
+        color = "black"
+        intiqp [fillcolor=white, label="Int Issue Queue Pop"];
+        memiqp [fillcolor=white, label="Memory Issue Queue Pop"];
+        muliqp [fillcolor=white, label="Mul/Div Issue Queue Pop"];
+        sbp [fillcolor=white, label="Store Buffer Pop"];
+    }
+
+    subgraph cluster_intpipeline1 {
+        node [shape=record style=filled]
+        label = "Int pipeline 1"
+        style = "dashed"
+        
+        intrrd1 [fillcolor=white, label="Int Register Read 1\n With CP0"];
+        alu1 [fillcolor=white, label="ALU with Comparator"];
+        intwb1 [fillcolor=white, label="Int Writeback 1"];
+    }
+
+    subgraph cluster_intpipeline2 {
+        node [shape=record style=filled]
+        label = "Int pipeline 2"
+        style = "dashed"
+
+        intrrd2 [fillcolor=white, label="Int Register Read 2"];
+        alu2 [fillcolor=white, label="ALU"];
+        intwb2 [fillcolor=white, label="Int Writeback 2"];
+    }
+
+    subgraph cluster_intpipeline3 {
+        node [shape=record style=filled]
+        label = "[Optional] Int pipeline 3"
+        style = "dashed"
+
+        intrrd3 [fillcolor=white, label="Int Register Read 3"];
+        alu3 [fillcolor=white, label="ALU"];
+        intwb3 [fillcolor=white, label="Int Writeback 3"];
+    }
+
+    subgraph cluster_mulpipeline {
+        node [shape=record style=filled]
+        label = "Mul/Div Pipeline"
+        style = "dashed"
+        
+        mulrrd [fillcolor=white, label="Mul/Div Register Read\nWith Hi/Lo"];
+        multiplier [fillcolor=white, label="Multiplier"];
+        divider [fillcolor=white, label="Divider"];
+        mulwb [fillcolor=white, label="Mul/Div Writeback"];
+    }
+
+    subgraph cluster_mempipeline {
+        node [shape=record style=filled]
+        label = "Memory Pipeline"
+        style = "dashed"
+        
+        memrrd [fillcolor=white, label="Memory Register Read"];
+        mem1 [fillcolor=white, label="MEM1|{Address Generation Unit | {<dcr> dcache Read | <dtlb> TLB}}"]
+        mem2 [fillcolor=white, label="MEM2|{dcache result|tag compare|{<sb> Store Buffer Push|<lr> Load Result}}"]
+        memwb [fillcolor=white, label="Memory Writeback"];
+    }
+
+    robc [label="Reorder Buffer Commit"];
+
+    IF1:icr -> IF2:icres;
+    IF1:btbr -> IF2:bpu;
+
+    IF2:fb -> da;
+    da->rnm;
+
+    rnm -> robi;
+    rnm -> intiq;
+    rnm -> memiq;
+    rnm -> muliq;
+
+    intiq -> intiqp -> intrrd1 -> alu1 -> intwb1 -> robc
+    intiqp -> intrrd2 -> alu2 -> intwb2 -> robc
+    intiqp -> intrrd3 -> alu3 -> intwb3 -> robc
+
+    muliq -> muliqp -> mulrrd -> multiplier -> mulwb -> robc;
+    mulrrd -> divider -> mulwb;
+
+    sbp -> memrrd
+    memiq -> memiqp -> memrrd -> mem1
+    {mem1:dcr, mem1:dtlb} -> mem2
+    mem2:lr -> memwb -> robc
+    mem2:sb -> sbp;
+
+    robi -> robc;
+}
