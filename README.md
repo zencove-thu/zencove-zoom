@@ -1,8 +1,9 @@
 # ZOOM (ZenCove Out-of-Order Machine) -- 乱序多发射MIPS32 CPU
 
-ZOOM is a highly configurable out-of-order MIPS32 processor, capable of booting Linux. This is a project for *Loongson Cup* competition, written by three undergraduate students.
+ZOOM is a highly configurable out-of-order MIPS32 processor, capable of booting Linux.
+This is a project for *'Loongson Cup' National Student Computer System Capability Challenge* (NSCSCC2022), written by three undergraduate students.
 
-该项目为清华大学ZenCove队在第六届“龙芯杯”全国大学生系统能力培养大赛的参赛作品。
+该项目为清华大学ZenCove队在第六届“龙芯杯”全国大学生系统能力培养大赛 (NSCSCC2022) 的参赛作品。
 
 项目作者为崔轶锴、张为、王拓为。
 
