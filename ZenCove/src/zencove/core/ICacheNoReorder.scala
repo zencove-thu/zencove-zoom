@@ -198,7 +198,7 @@ class ICacheNoReorder(config: ZencoveConfig) extends Plugin[FetchPipeline] with 
           // 避免IF1中指令取不到新写的cache，重取
           // 每一条都从state boot开始
           when(arbitration.notStuck) {
-            doRefetch := True
+            doRefetch := !IF1.arbitration.isFlushed
             goto(stateBoot)
           }
         }
